@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "noteKit",
+    "slug": "notekit-frontend",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/theme/notekit_icon.jpeg",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./src/theme/notekit_icon.jpeg",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b0f1a"
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-audio"
+    ],
+    "ios": {
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "NoteKit uses the microphone so you can speak assistant commands."
+      }
+    },
+    "android": {
+      "package": "com.kalkeesh.notekit",
+      "adaptiveIcon": {
+        "foregroundImage": "./src/theme/notekit_icon.jpeg",
+        "backgroundColor": "#0b0f1a"
+      },
+      "permissions": [
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1f5a1bde-207f-41e7-acd8-d61e883ae82d"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+motor
+pymongo
+python-dotenv
+pydantic
+email-validator
+PyJWT
+requests
+beautifulsoup4
+python-multipart
