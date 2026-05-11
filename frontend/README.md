@@ -11,6 +11,8 @@
 The app now tries to detect the backend host automatically from the Expo/Metro URL.
 If that still does not match your setup, open Settings in the app and override the API base URL manually.
 
+- Core default: `https://notekit-core-backend.vercel.app`
+- Budgetify default: `https://notekit-budgetify-backend.vercel.app`
 - Android emulator: `http://10.0.2.2:8000`
 - iOS simulator: `http://localhost:8000`
 - Physical device with Expo Go: `http://<your-computer-lan-ip>:8000`
@@ -51,5 +53,5 @@ This saves the latest finished Android build URL to `frontend\apk-link.txt`.
 - If Expo prompts to link the project, complete that flow during `eas build:configure`
 - If package validation fails, run `npx expo install --check` on a machine with internet access and apply the recommended version updates
 - If Android credentials are missing, let EAS generate the keystore when prompted
-- If the APK cannot reach your backend, set `EXPO_PUBLIC_API_BASE_URL` before starting the build
+- If the APK cannot reach your backends, set `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_BUDGETIFY_API_BASE_URL` before starting the build
 - Keep using the `preview` profile for installable APK output because default Android cloud builds are usually `.aab`

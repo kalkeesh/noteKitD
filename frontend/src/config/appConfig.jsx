@@ -5,8 +5,11 @@ const API_PORT = 8000;
 const BUDGETIFY_API_PORT = 8001;
 const ENV_API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 const ENV_BUDGETIFY_API_BASE_URL = process.env.EXPO_PUBLIC_BUDGETIFY_API_BASE_URL;
-const DEFAULT_NETWORK_API_BASE_URL = 'https://notekit-core-backend.onrender.com';
-const DEFAULT_BUDGETIFY_NETWORK_API_BASE_URL = 'https://notekit-budgetify-backend.onrender.com';
+const DEFAULT_NETWORK_API_BASE_URL = 'https://notekit-core-backend.vercel.app';
+const DEFAULT_BUDGETIFY_NETWORK_API_BASE_URL = 'https://notekit-budgetify-backend.vercel.app';
+const LEGACY_NETWORK_API_BASE_URL = 'https://notekit-core-backend.onrender.com';
+const LEGACY_BUDGETIFY_NETWORK_API_BASE_URL = 'https://notekit-budgetify-backend.onrender.com';
+const USE_LOCAL_API_AUTO_DETECTION = process.env.EXPO_PUBLIC_USE_LOCAL_API === 'true';
 // const DEFAULT_NETWORK_API_BASE_URL = '192.168.31.228:8000';
 
 const DEFAULT_EMULATOR_API_BASE_URL = `http://10.0.2.2:${API_PORT}`;
@@ -16,6 +19,28 @@ const DEFAULT_BUDGETIFY_LOCALHOST_API_BASE_URL = `http://localhost:${BUDGETIFY_A
 
 function normalizeApiBaseUrl(url) {
   return (url || '').trim().replace(/\/+$/, '');
+}
+
+export function normalizeCoreApiBaseUrl(url) {
+  const normalized = normalizeApiBaseUrl(url);
+  return normalized === LEGACY_NETWORK_API_BASE_URL ? DEFAULT_NETWORK_API_BASE_URL : normalized;
+}
+
+export function normalizeBudgetifyApiBaseUrl(url) {
+  const normalized = normalizeApiBaseUrl(url);
+  return normalized === LEGACY_BUDGETIFY_NETWORK_API_BASE_URL
+    ? DEFAULT_BUDGETIFY_NETWORK_API_BASE_URL
+    : normalized;
+}
+
+export function normalizeSavedCoreApiBaseUrl(url) {
+  const normalized = normalizeCoreApiBaseUrl(url);
+  return isLocalNetworkApiBaseUrl(normalized) ? DEFAULT_NETWORK_API_BASE_URL : normalized;
+}
+
+export function normalizeSavedBudgetifyApiBaseUrl(url) {
+  const normalized = normalizeBudgetifyApiBaseUrl(url);
+  return isLocalNetworkApiBaseUrl(normalized) ? DEFAULT_BUDGETIFY_NETWORK_API_BASE_URL : normalized;
 }
 
 export function isLocalNetworkApiBaseUrl(url) {
@@ -97,56 +122,60 @@ function inferApiBaseUrlFromMetro(port = API_PORT) {
 }
 
 function getFallbackApiBaseUrl() {
-  const normalizedEnvApiBaseUrl = normalizeApiBaseUrl(ENV_API_BASE_URL);
+  const normalizedEnvApiBaseUrl = normalizeCoreApiBaseUrl(ENV_API_BASE_URL);
   if (normalizedEnvApiBaseUrl) {
     return normalizedEnvApiBaseUrl;
   }
 
-  const expoConfigApiBaseUrl = normalizeApiBaseUrl(inferApiBaseUrlFromExpoConfig());
-  if (expoConfigApiBaseUrl) {
-    return expoConfigApiBaseUrl;
-  }
-
-  const metroApiBaseUrl = normalizeApiBaseUrl(inferApiBaseUrlFromMetro());
-  if (metroApiBaseUrl) {
-    return metroApiBaseUrl;
-  }
-
-  if (Platform.OS === 'android') {
-    return DEFAULT_EMULATOR_API_BASE_URL;
-  }
-
-  const normalizedNetworkApiBaseUrl = normalizeApiBaseUrl(DEFAULT_NETWORK_API_BASE_URL);
+  const normalizedNetworkApiBaseUrl = normalizeCoreApiBaseUrl(DEFAULT_NETWORK_API_BASE_URL);
   if (normalizedNetworkApiBaseUrl) {
     return normalizedNetworkApiBaseUrl;
+  }
+
+  if (USE_LOCAL_API_AUTO_DETECTION) {
+    const expoConfigApiBaseUrl = normalizeApiBaseUrl(inferApiBaseUrlFromExpoConfig());
+    if (expoConfigApiBaseUrl) {
+      return expoConfigApiBaseUrl;
+    }
+
+    const metroApiBaseUrl = normalizeApiBaseUrl(inferApiBaseUrlFromMetro());
+    if (metroApiBaseUrl) {
+      return metroApiBaseUrl;
+    }
+
+    if (Platform.OS === 'android') {
+      return DEFAULT_EMULATOR_API_BASE_URL;
+    }
   }
 
   return DEFAULT_LOCALHOST_API_BASE_URL;
 }
 
 function getFallbackBudgetifyApiBaseUrl() {
-  const normalizedEnvApiBaseUrl = normalizeApiBaseUrl(ENV_BUDGETIFY_API_BASE_URL);
+  const normalizedEnvApiBaseUrl = normalizeBudgetifyApiBaseUrl(ENV_BUDGETIFY_API_BASE_URL);
   if (normalizedEnvApiBaseUrl) {
     return normalizedEnvApiBaseUrl;
   }
 
-  const expoConfigApiBaseUrl = normalizeApiBaseUrl(inferApiBaseUrlFromExpoConfig(BUDGETIFY_API_PORT));
-  if (expoConfigApiBaseUrl) {
-    return expoConfigApiBaseUrl;
-  }
-
-  const metroApiBaseUrl = normalizeApiBaseUrl(inferApiBaseUrlFromMetro(BUDGETIFY_API_PORT));
-  if (metroApiBaseUrl) {
-    return metroApiBaseUrl;
-  }
-
-  if (Platform.OS === 'android') {
-    return DEFAULT_BUDGETIFY_EMULATOR_API_BASE_URL;
-  }
-
-  const normalizedNetworkApiBaseUrl = normalizeApiBaseUrl(DEFAULT_BUDGETIFY_NETWORK_API_BASE_URL);
+  const normalizedNetworkApiBaseUrl = normalizeBudgetifyApiBaseUrl(DEFAULT_BUDGETIFY_NETWORK_API_BASE_URL);
   if (normalizedNetworkApiBaseUrl) {
     return normalizedNetworkApiBaseUrl;
+  }
+
+  if (USE_LOCAL_API_AUTO_DETECTION) {
+    const expoConfigApiBaseUrl = normalizeApiBaseUrl(inferApiBaseUrlFromExpoConfig(BUDGETIFY_API_PORT));
+    if (expoConfigApiBaseUrl) {
+      return expoConfigApiBaseUrl;
+    }
+
+    const metroApiBaseUrl = normalizeApiBaseUrl(inferApiBaseUrlFromMetro(BUDGETIFY_API_PORT));
+    if (metroApiBaseUrl) {
+      return metroApiBaseUrl;
+    }
+
+    if (Platform.OS === 'android') {
+      return DEFAULT_BUDGETIFY_EMULATOR_API_BASE_URL;
+    }
   }
 
   return DEFAULT_BUDGETIFY_LOCALHOST_API_BASE_URL;
@@ -178,12 +207,12 @@ export function getBudgetifyApiBaseUrl() {
 }
 
 export function setApiBaseUrl(url) {
-  const normalized = normalizeApiBaseUrl(url);
+  const normalized = normalizeCoreApiBaseUrl(url);
   runtimeApiBaseUrl = normalized || getFallbackApiBaseUrl();
 }
 
 export function setBudgetifyApiBaseUrl(url) {
-  const normalized = normalizeApiBaseUrl(url);
+  const normalized = normalizeBudgetifyApiBaseUrl(url);
   runtimeBudgetifyApiBaseUrl = normalized || getFallbackBudgetifyApiBaseUrl();
 }
 

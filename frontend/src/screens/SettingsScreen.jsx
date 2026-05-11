@@ -15,6 +15,8 @@ import {
   getBudgetifyApiBaseUrl,
   getDefaultApiBaseUrl,
   getDefaultBudgetifyApiBaseUrl,
+  normalizeSavedBudgetifyApiBaseUrl,
+  normalizeSavedCoreApiBaseUrl,
   setApiBaseUrl,
   setBudgetifyApiBaseUrl,
 } from '../config/appConfig';
@@ -74,9 +76,13 @@ export default function SettingsScreen({ navigation }) {
       ]);
       if (mounted) {
         if (saved) {
-          setApiBaseUrl(saved);
-          setApiBaseUrlInput(saved);
-          setSavedBaseUrl(saved);
+          const normalizedSaved = normalizeSavedCoreApiBaseUrl(saved);
+          setApiBaseUrl(normalizedSaved);
+          setApiBaseUrlInput(normalizedSaved);
+          setSavedBaseUrl(normalizedSaved);
+          if (normalizedSaved !== saved) {
+            await saveApiBaseUrl(normalizedSaved);
+          }
         } else {
           const fallback = getApiBaseUrl();
           setApiBaseUrl(fallback);
@@ -84,9 +90,13 @@ export default function SettingsScreen({ navigation }) {
           setSavedBaseUrl(fallback);
         }
         if (savedBudgetify) {
-          setBudgetifyApiBaseUrl(savedBudgetify);
-          setBudgetifyApiBaseUrlInput(savedBudgetify);
-          setSavedBudgetifyBaseUrl(savedBudgetify);
+          const normalizedSavedBudgetify = normalizeSavedBudgetifyApiBaseUrl(savedBudgetify);
+          setBudgetifyApiBaseUrl(normalizedSavedBudgetify);
+          setBudgetifyApiBaseUrlInput(normalizedSavedBudgetify);
+          setSavedBudgetifyBaseUrl(normalizedSavedBudgetify);
+          if (normalizedSavedBudgetify !== savedBudgetify) {
+            await saveBudgetifyApiBaseUrl(normalizedSavedBudgetify);
+          }
         } else {
           const fallback = getBudgetifyApiBaseUrl();
           setBudgetifyApiBaseUrl(fallback);
@@ -102,12 +112,12 @@ export default function SettingsScreen({ navigation }) {
   }, []);
 
   const onSave = async () => {
-    const nextUrl = (apiBaseUrlInput || '').trim();
+    const nextUrl = normalizeSavedCoreApiBaseUrl(apiBaseUrlInput);
     if (!/^https?:\/\//i.test(nextUrl)) {
       showAppAlert('Invalid URL', 'Core API link must start with http:// or https://');
       return;
     }
-    const nextBudgetifyUrl = (budgetifyApiBaseUrlInput || '').trim();
+    const nextBudgetifyUrl = normalizeSavedBudgetifyApiBaseUrl(budgetifyApiBaseUrlInput);
     if (!/^https?:\/\//i.test(nextBudgetifyUrl)) {
       showAppAlert('Invalid URL', 'Budgetify API link must start with http:// or https://');
       return;

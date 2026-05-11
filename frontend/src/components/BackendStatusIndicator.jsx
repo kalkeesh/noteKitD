@@ -1,35 +1,73 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AppState, Platform, StatusBar, StyleSheet, View } from 'react-native';
 
-import { getApiBaseUrl, setApiBaseUrl } from '../config/appConfig';
-import { loadSavedApiBaseUrl } from '../config/apiBaseUrlStorage';
+import {
+  getApiBaseUrl,
+  getBudgetifyApiBaseUrl,
+  normalizeSavedBudgetifyApiBaseUrl,
+  normalizeSavedCoreApiBaseUrl,
+  setApiBaseUrl,
+  setBudgetifyApiBaseUrl,
+} from '../config/appConfig';
+import {
+  loadSavedApiBaseUrl,
+  loadSavedBudgetifyApiBaseUrl,
+  saveApiBaseUrl,
+  saveBudgetifyApiBaseUrl,
+} from '../config/apiBaseUrlStorage';
 
 const CHECK_TIMEOUT_MS = 12000;
 const RETRY_DELAY_MS = 2500;
 const SUCCESS_VISIBLE_MS = 3000;
+const CORE_BACKEND = 'core';
+const BUDGETIFY_BACKEND = 'budgetify';
+const BACKEND_HEALTH_PATHS = {
+  [CORE_BACKEND]: '/api/health',
+  [BUDGETIFY_BACKEND]: '/budget/health',
+};
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function resolveStatusApiBaseUrl() {
+async function resolveCoreApiBaseUrl() {
   const saved = await loadSavedApiBaseUrl();
   if (saved) {
-    setApiBaseUrl(saved);
+    const normalizedSaved = normalizeSavedCoreApiBaseUrl(saved);
+    setApiBaseUrl(normalizedSaved);
+    if (normalizedSaved !== saved) {
+      await saveApiBaseUrl(normalizedSaved);
+    }
   }
   return getApiBaseUrl();
 }
 
-async function pingBackend(baseUrl) {
+async function resolveBudgetifyApiBaseUrl() {
+  const saved = await loadSavedBudgetifyApiBaseUrl();
+  if (saved) {
+    const normalizedSaved = normalizeSavedBudgetifyApiBaseUrl(saved);
+    setBudgetifyApiBaseUrl(normalizedSaved);
+    if (normalizedSaved !== saved) {
+      await saveBudgetifyApiBaseUrl(normalizedSaved);
+    }
+  }
+  return getBudgetifyApiBaseUrl();
+}
+
+async function pingBackend(baseUrl, path) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${baseUrl}/`, {
+    const response = await fetch(`${baseUrl}${path}`, {
       method: 'GET',
       signal: controller.signal,
     });
-    return response.ok;
+    if (!response.ok) {
+      return false;
+    }
+    const data = await response.json().catch(() => null);
+    return !data?.status || data.status === 'ok';
   } catch {
     return false;
   } finally {
@@ -38,68 +76,85 @@ async function pingBackend(baseUrl) {
 }
 
 export default function BackendStatusIndicator() {
-  const [status, setStatus] = useState('checking');
-  const runIdRef = useRef(0);
+  const [statuses, setStatuses] = useState({
+    [CORE_BACKEND]: 'checking',
+    [BUDGETIFY_BACKEND]: 'checking',
+  });
+  const runIdsRef = useRef({
+    [CORE_BACKEND]: 0,
+    [BUDGETIFY_BACKEND]: 0,
+  });
 
   useEffect(() => {
     let mounted = true;
 
-    const checkUntilReady = async () => {
-      const runId = runIdRef.current + 1;
-      runIdRef.current = runId;
-      setStatus('checking');
+    const checkUntilReady = async (backendKey, resolveBaseUrl) => {
+      const runId = runIdsRef.current[backendKey] + 1;
+      runIdsRef.current[backendKey] = runId;
+      setStatuses((current) => ({ ...current, [backendKey]: 'checking' }));
 
-      const baseUrl = await resolveStatusApiBaseUrl();
-      if (!mounted || runIdRef.current !== runId) {
+      const baseUrl = await resolveBaseUrl();
+      if (!mounted || runIdsRef.current[backendKey] !== runId) {
         return;
       }
 
-      while (mounted && runIdRef.current === runId) {
-        const isReady = await pingBackend(baseUrl);
-        if (!mounted || runIdRef.current !== runId) {
+      while (mounted && runIdsRef.current[backendKey] === runId) {
+        const isReady = await pingBackend(baseUrl, BACKEND_HEALTH_PATHS[backendKey]);
+        if (!mounted || runIdsRef.current[backendKey] !== runId) {
           return;
         }
 
         if (isReady) {
-          setStatus('ready');
+          setStatuses((current) => ({ ...current, [backendKey]: 'ready' }));
           await wait(SUCCESS_VISIBLE_MS);
-          if (mounted && runIdRef.current === runId) {
-            setStatus('hidden');
+          if (mounted && runIdsRef.current[backendKey] === runId) {
+            setStatuses((current) => ({ ...current, [backendKey]: 'hidden' }));
           }
           return;
         }
 
-        setStatus('down');
+        setStatuses((current) => ({ ...current, [backendKey]: 'down' }));
         await wait(RETRY_DELAY_MS);
       }
     };
 
-    checkUntilReady();
+    const checkBothBackends = () => {
+      checkUntilReady(CORE_BACKEND, resolveCoreApiBaseUrl);
+      checkUntilReady(BUDGETIFY_BACKEND, resolveBudgetifyApiBaseUrl);
+    };
+
+    checkBothBackends();
 
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
-        checkUntilReady();
+        checkBothBackends();
       }
     });
 
     return () => {
       mounted = false;
-      runIdRef.current += 1;
+      runIdsRef.current[CORE_BACKEND] += 1;
+      runIdsRef.current[BUDGETIFY_BACKEND] += 1;
       subscription.remove();
     };
   }, []);
 
-  if (status === 'hidden') {
+  const visibleBackends = [CORE_BACKEND, BUDGETIFY_BACKEND].filter((backendKey) => statuses[backendKey] !== 'hidden');
+
+  if (!visibleBackends.length) {
     return null;
   }
 
-  const ready = status === 'ready';
-
   return (
     <View pointerEvents="none" style={styles.wrap}>
-      <View style={[styles.indicator, ready ? styles.ready : styles.down]}>
-        <View style={[styles.innerDot, ready ? styles.readyDot : styles.downDot]} />
-      </View>
+      {visibleBackends.map((backendKey) => {
+        const ready = statuses[backendKey] === 'ready';
+        return (
+          <View key={backendKey} style={[styles.indicator, ready ? styles.ready : styles.down]}>
+            <View style={[styles.innerDot, ready ? styles.readyDot : styles.downDot]} />
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -111,6 +166,8 @@ const styles = StyleSheet.create({
     left: 12,
     zIndex: 9999,
     elevation: 9999,
+    flexDirection: 'row',
+    gap: 8,
   },
   indicator: {
     width: 24,

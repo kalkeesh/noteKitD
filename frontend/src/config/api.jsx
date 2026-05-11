@@ -1,5 +1,17 @@
-import { getApiBaseUrl, getBudgetifyApiBaseUrl, setApiBaseUrl, setBudgetifyApiBaseUrl } from './appConfig';
-import { loadSavedApiBaseUrl, loadSavedBudgetifyApiBaseUrl } from './apiBaseUrlStorage';
+import {
+  getApiBaseUrl,
+  getBudgetifyApiBaseUrl,
+  normalizeSavedBudgetifyApiBaseUrl,
+  normalizeSavedCoreApiBaseUrl,
+  setApiBaseUrl,
+  setBudgetifyApiBaseUrl,
+} from './appConfig';
+import {
+  loadSavedApiBaseUrl,
+  loadSavedBudgetifyApiBaseUrl,
+  saveApiBaseUrl,
+  saveBudgetifyApiBaseUrl,
+} from './apiBaseUrlStorage';
 
 let apiBaseUrlInitialized = false;
 let budgetifyApiBaseUrlInitialized = false;
@@ -11,7 +23,11 @@ async function ensureApiBaseUrl() {
   }
   const saved = await loadSavedApiBaseUrl();
   if (saved) {
-    setApiBaseUrl(saved);
+    const normalizedSaved = normalizeSavedCoreApiBaseUrl(saved);
+    setApiBaseUrl(normalizedSaved);
+    if (normalizedSaved !== saved) {
+      await saveApiBaseUrl(normalizedSaved);
+    }
   }
   apiBaseUrlInitialized = true;
 }
@@ -22,7 +38,11 @@ async function ensureBudgetifyApiBaseUrl() {
   }
   const saved = await loadSavedBudgetifyApiBaseUrl();
   if (saved) {
-    setBudgetifyApiBaseUrl(saved);
+    const normalizedSaved = normalizeSavedBudgetifyApiBaseUrl(saved);
+    setBudgetifyApiBaseUrl(normalizedSaved);
+    if (normalizedSaved !== saved) {
+      await saveBudgetifyApiBaseUrl(normalizedSaved);
+    }
   }
   budgetifyApiBaseUrlInitialized = true;
 }

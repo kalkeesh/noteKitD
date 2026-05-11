@@ -4,16 +4,17 @@
     "slug": "notekit-frontend",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/theme/notekit_icon.jpeg",
+    "icon": "./src/theme/notekit_icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./src/theme/notekit_icon.jpeg",
+      "image": "./src/theme/notekit_splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0b0f1a"
     },
     "plugins": [
       "expo-notifications",
-      "expo-audio"
+      "expo-audio",
+      "expo-asset"
     ],
     "ios": {
       "infoPlist": {
@@ -23,7 +24,7 @@
     "android": {
       "package": "com.kalkeesh.notekit",
       "adaptiveIcon": {
-        "foregroundImage": "./src/theme/notekit_icon.jpeg",
+        "foregroundImage": "./src/theme/notekit_icon.png",
         "backgroundColor": "#0b0f1a"
       },
       "permissions": [
