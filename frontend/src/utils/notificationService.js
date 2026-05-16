@@ -1,3 +1,5 @@
+import { inferNotificationKind } from './toastService';
+
 function normalizeLine(value, fallback = '') {
   return String(value || fallback)
     .replace(/\s+/g, ' ')
@@ -12,6 +14,9 @@ export function buildNotificationContent(title, body) {
   return {
     title: cleanTitle.slice(0, 80),
     body: cleanBody.slice(0, 140),
+    data: {
+      notificationKind: inferNotificationKind(cleanTitle, cleanBody),
+    },
   };
 }
 

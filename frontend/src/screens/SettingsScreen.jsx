@@ -27,8 +27,14 @@ import {
   saveBudgetifyApiBaseUrl,
 } from '../config/apiBaseUrlStorage';
 import { loadSavedAiProvider, saveAiProvider } from '../config/aiProviderStorage';
+import {
+  NOTIFICATION_THEMES,
+  loadSavedNotificationTheme,
+  saveNotificationTheme,
+} from '../config/notificationThemeStorage';
 import KeyboardScreen from '../components/KeyboardScreen';
 import { showAppAlert } from '../utils/appAlerts';
+import { setToastNotificationTheme, toast } from '../utils/toastService';
 
 const AI_PASSWORD = '8989';
 const SETTINGS_ACTIONS = [
@@ -45,6 +51,12 @@ const SETTINGS_ACTIONS = [
     icon: 'cpu',
   },
   {
+    key: 'notifications',
+    title: 'Notifications',
+    description: 'Choose how app alerts should look.',
+    icon: 'bell',
+  },
+  {
     key: 'about-app',
     title: 'About App',
     description: 'See what Notes, Tasks, Budgetify, and AI can do.',
@@ -58,21 +70,24 @@ export default function SettingsScreen({ navigation }) {
   const [savedBaseUrl, setSavedBaseUrl] = useState(getApiBaseUrl());
   const [savedBudgetifyBaseUrl, setSavedBudgetifyBaseUrl] = useState(getBudgetifyApiBaseUrl());
   const [selectedAiProvider, setSelectedAiProvider] = useState('gemini');
+  const [selectedNotificationTheme, setSelectedNotificationTheme] = useState('midnight');
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [saving, setSaving] = useState(false);
   const [baseUrlModalVisible, setBaseUrlModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [aiConfigModalVisible, setAiConfigModalVisible] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [saved, savedBudgetify, savedProvider] = await Promise.all([
+      const [saved, savedBudgetify, savedProvider, savedNotificationTheme] = await Promise.all([
         loadSavedApiBaseUrl(),
         loadSavedBudgetifyApiBaseUrl(),
         loadSavedAiProvider(),
+        loadSavedNotificationTheme(),
       ]);
       if (mounted) {
         if (saved) {
@@ -104,6 +119,8 @@ export default function SettingsScreen({ navigation }) {
           setSavedBudgetifyBaseUrl(fallback);
         }
         setSelectedAiProvider(savedProvider);
+        setSelectedNotificationTheme(savedNotificationTheme);
+        setToastNotificationTheme(savedNotificationTheme);
       }
     })();
     return () => {
@@ -184,6 +201,18 @@ export default function SettingsScreen({ navigation }) {
     showAppAlert('Saved', `AI provider set to ${nextProvider === 'groq' ? 'Groq' : 'Gemini'}.`);
   };
 
+  const onSaveNotificationTheme = async (theme) => {
+    const nextTheme = await saveNotificationTheme(theme);
+    setSelectedNotificationTheme(nextTheme);
+    setToastNotificationTheme(nextTheme);
+    showAppAlert('Saved', `${getNotificationThemeTitle(nextTheme)} notifications selected.`);
+  };
+
+  const onTestNotificationTheme = () => {
+    setToastNotificationTheme(selectedNotificationTheme);
+    toast.info('This is how NoteKit notifications will look.', { duration: 3200 });
+  };
+
   const onPressSettingsAction = (key) => {
     if (key === 'base-url') {
       openBaseUrlModal();
@@ -191,6 +220,10 @@ export default function SettingsScreen({ navigation }) {
     }
     if (key === 'ai-assistant') {
       openAiPasswordModal();
+      return;
+    }
+    if (key === 'notifications') {
+      setNotificationModalVisible(true);
       return;
     }
     setAboutModalVisible(true);
@@ -237,6 +270,9 @@ export default function SettingsScreen({ navigation }) {
                 <Text style={styles.actionMeta}>
                   Current: {selectedAiProvider === 'groq' ? 'Groq' : 'Gemini'}
                 </Text>
+              ) : null}
+              {item.key === 'notifications' ? (
+                <Text style={styles.actionMeta}>Current: {getNotificationThemeTitle(selectedNotificationTheme)}</Text>
               ) : null}
             </View>
             <Feather name="chevron-right" size={18} color="rgba(148,163,184,0.7)" />
@@ -381,6 +417,62 @@ export default function SettingsScreen({ navigation }) {
       </Modal>
 
       <Modal
+        visible={notificationModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setNotificationModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Notifications</Text>
+            <Text style={styles.modalDescription}>Choose the alert style used across the app.</Text>
+            {NOTIFICATION_THEMES.map((theme) => {
+              const selected = selectedNotificationTheme === theme.key;
+              return (
+                <Pressable
+                  key={theme.key}
+                  style={[styles.providerOption, selected ? styles.providerOptionActive : null]}
+                  onPress={() => setSelectedNotificationTheme(theme.key)}
+                >
+                  <View style={[styles.notificationPreview, styles[`notificationPreview_${theme.key}`]]}>
+                    <Feather
+                      name={theme.key === 'ember' ? 'zap' : theme.key === 'aurora' ? 'activity' : 'moon'}
+                      size={15}
+                      color="#ffffff"
+                    />
+                  </View>
+                  <View style={styles.providerCopy}>
+                    <Text style={styles.providerTitle}>{theme.title}</Text>
+                    <Text style={styles.providerDescription}>{theme.description}</Text>
+                  </View>
+                  {selected ? <Feather name="check" size={17} color="#60a5fa" /> : null}
+                </Pressable>
+              );
+            })}
+            <Pressable style={styles.secondaryBtn} onPress={onTestNotificationTheme}>
+              <Feather name="bell" size={14} color="#dbeafe" />
+              <Text style={styles.secondaryBtnText}>Test Notification</Text>
+            </Pressable>
+            <View style={styles.modalActionRow}>
+              <Pressable style={styles.iconGhostBtn} onPress={() => setNotificationModalVisible(false)}>
+                <Feather name="x" size={16} color="#e2e8f0" />
+              </Pressable>
+              <Pressable
+                style={styles.iconPrimaryBtn}
+                onPress={() => {
+                  onSaveNotificationTheme(selectedNotificationTheme);
+                  setNotificationModalVisible(false);
+                }}
+              >
+                <Feather name="check" size={16} color="#ffffff" />
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         visible={aboutModalVisible}
         transparent
         animationType="slide"
@@ -416,6 +508,10 @@ export default function SettingsScreen({ navigation }) {
       </Modal>
     </KeyboardScreen>
   );
+}
+
+function getNotificationThemeTitle(themeKey) {
+  return NOTIFICATION_THEMES.find((theme) => theme.key === themeKey)?.title || 'Midnight';
 }
 
 const styles = StyleSheet.create({
@@ -695,6 +791,25 @@ const styles = StyleSheet.create({
   },
   providerIconWrapActive: {
     backgroundColor: '#2563eb',
+  },
+  notificationPreview: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  notificationPreview_midnight: {
+    backgroundColor: '#1d4ed8',
+  },
+  notificationPreview_aurora: {
+    backgroundColor: '#059669',
+  },
+  notificationPreview_ember: {
+    backgroundColor: '#d97706',
   },
   providerCopy: {
     flex: 1,

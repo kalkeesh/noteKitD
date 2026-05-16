@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, StatusBar, StyleSheet, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 
 import {
   getApiBaseUrl,
@@ -15,6 +15,7 @@ import {
   saveApiBaseUrl,
   saveBudgetifyApiBaseUrl,
 } from '../config/apiBaseUrlStorage';
+import AssistantFaceIcon from '../features/assistant/components/AssistantFaceIcon';
 
 const CHECK_TIMEOUT_MS = 12000;
 const RETRY_DELAY_MS = 2500;
@@ -147,14 +148,12 @@ export default function BackendStatusIndicator() {
 
   return (
     <View pointerEvents="none" style={styles.wrap}>
-      {visibleBackends.map((backendKey) => {
-        const ready = statuses[backendKey] === 'ready';
-        return (
-          <View key={backendKey} style={[styles.indicator, ready ? styles.ready : styles.down]}>
-            <View style={[styles.innerDot, ready ? styles.readyDot : styles.downDot]} />
-          </View>
-        );
-      })}
+      <AssistantFaceIcon
+        eyes={[CORE_BACKEND, BUDGETIFY_BACKEND].map((backendKey) =>
+          statuses[backendKey] === 'ready' || statuses[backendKey] === 'hidden' ? 'ready' : 'down'
+        )}
+      />
+      <View style={styles.labelPlate} />
     </View>
   );
 }
@@ -162,42 +161,15 @@ export default function BackendStatusIndicator() {
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    top: (Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0) + 10,
-    left: 12,
+    left: 20,
+    bottom: 82,
     zIndex: 9999,
     elevation: 9999,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  indicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
   },
-  innerDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  down: {
-    backgroundColor: 'rgba(127, 29, 29, 0.92)',
-    borderColor: 'rgba(248, 113, 113, 0.72)',
-  },
-  downDot: {
-    backgroundColor: '#f87171',
-  },
-  ready: {
-    backgroundColor: 'rgba(20, 83, 45, 0.92)',
-    borderColor: 'rgba(74, 222, 128, 0.75)',
-  },
-  readyDot: {
-    backgroundColor: '#4ade80',
+  labelPlate: {
+    marginTop: 6,
+    width: 18,
+    height: 8,
   },
 });

@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { registerConfirmHandler } from '../utils/confirmService';
-import { registerToastHandler } from '../utils/toastService';
+import { registerNotificationThemeHandler, registerToastHandler, setToastNotificationTheme } from '../utils/toastService';
+import { loadSavedNotificationTheme } from '../config/notificationThemeStorage';
 
 const TYPE_META = {
   success: { color: '#22c55e', icon: 'check-circle' },
@@ -13,8 +14,41 @@ const TYPE_META = {
   info: { color: '#3b82f6', icon: 'info' },
 };
 
+const APP_ICON = require('../theme/notekit_icon.png');
+
+const KIND_META = {
+  budget: { icon: 'dollar-sign', color: '#22c55e' },
+  task: { icon: 'check-square', color: '#60a5fa' },
+  app: { appIcon: true },
+};
+
+const THEME_META = {
+  midnight: {
+    card: 'rgba(15,23,42,0.94)',
+    text: '#f8fafc',
+    border: '55',
+    iconTint: '20',
+    shadow: '#000000',
+  },
+  aurora: {
+    card: 'rgba(6,78,59,0.94)',
+    text: '#ecfdf5',
+    border: '70',
+    iconTint: '28',
+    shadow: '#064e3b',
+  },
+  ember: {
+    card: 'rgba(69,26,3,0.95)',
+    text: '#fffbeb',
+    border: '78',
+    iconTint: '30',
+    shadow: '#451a03',
+  },
+};
+
 export function ToastHost() {
   const [currentToast, setCurrentToast] = useState(null);
+  const [notificationTheme, setNotificationTheme] = useState('midnight');
   const queueRef = useRef([]);
   const activeToastRef = useRef(null);
   const dismissTimerRef = useRef(null);
@@ -28,9 +62,12 @@ export function ToastHost() {
         showNextToast();
       }
     });
+    const themeCleanup = registerNotificationThemeHandler(setNotificationTheme);
+    loadSavedNotificationTheme().then(setToastNotificationTheme).catch(() => undefined);
 
     return () => {
       cleanup();
+      themeCleanup();
       if (dismissTimerRef.current) {
         clearTimeout(dismissTimerRef.current);
       }
@@ -72,6 +109,9 @@ export function ToastHost() {
   }
 
   const meta = TYPE_META[currentToast.type] || TYPE_META.info;
+  const kindMeta = KIND_META[currentToast.kind] || KIND_META.app;
+  const iconColor = kindMeta.color || meta.color;
+  const theme = THEME_META[currentToast.theme || notificationTheme] || THEME_META.midnight;
 
   return (
     <View pointerEvents="box-none" style={styles.viewport}>
@@ -81,14 +121,20 @@ export function ToastHost() {
           {
             opacity,
             transform: [{ translateY }],
-            borderColor: `${meta.color}55`,
+            backgroundColor: theme.card,
+            borderColor: `${iconColor}${theme.border}`,
+            shadowColor: theme.shadow,
           },
         ]}
       >
-        <View style={[styles.iconWrap, { backgroundColor: `${meta.color}20` }]}>
-          <Feather name={meta.icon} size={16} color={meta.color} />
+        <View style={[styles.iconWrap, { backgroundColor: `${iconColor}${theme.iconTint}` }]}>
+          {kindMeta.appIcon ? (
+            <Image source={APP_ICON} style={styles.appIcon} />
+          ) : (
+            <Feather name={kindMeta.icon || meta.icon} size={16} color={iconColor} />
+          )}
         </View>
-        <Text style={styles.toastText}>{currentToast.message}</Text>
+        <Text style={[styles.toastText, { color: theme.text }]}>{currentToast.message}</Text>
       </Animated.View>
     </View>
   );
@@ -151,8 +197,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 13,
-    backgroundColor: 'rgba(15,23,42,0.9)',
-    shadowColor: '#000000',
     shadowOpacity: 0.28,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -165,6 +209,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  appIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
   },
   toastText: {
     flex: 1,

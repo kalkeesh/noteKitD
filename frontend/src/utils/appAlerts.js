@@ -31,7 +31,7 @@ export function showAppAlert(title, message) {
     type = 'success';
   }
 
-  showToast(normalizedMessage || title, type);
+  showToast(normalizedMessage || title, type, { title });
 }
 
 export function showAppConfirm(options) {

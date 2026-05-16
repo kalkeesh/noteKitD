@@ -1,12 +1,13 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+
+import AssistantFaceIcon from './AssistantFaceIcon';
 
 export default function AIAssistantBubble({ onPress }) {
   return (
     <View pointerEvents="box-none" style={styles.wrap}>
       <Pressable style={styles.button} onPress={onPress}>
-        <Feather name="mic" size={24} color="#ffffff" />
+        <AssistantFaceIcon eyes={['idle', 'idle']} />
       </Pressable>
       <Text style={styles.label}>AI</Text>
     </View>
@@ -25,16 +26,8 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#1d4ed8',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(9,13,22,0.85)',
-    shadowColor: '#312e81',
-    shadowOpacity: 0.38,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
   },
   label: {
     marginTop: 6,
