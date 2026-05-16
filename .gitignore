@@ -74,6 +74,7 @@ Desktop.ini
 !.vscode/tasks.json
 
 # Tool caches
+.vercel/
 .cache/
 .parcel-cache/
 .turbo/

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
+from pymongo.errors import PyMongoError
 
 from auth_dependency import get_current_user
+from db import db
 
 from .repository import BudgetRepository
 from .schemas import (
@@ -32,6 +34,15 @@ from .service import BudgetService
 
 router = APIRouter(prefix="/budget", tags=["Budgetify"])
 service = BudgetService(BudgetRepository())
+
+
+@router.get("/health")
+async def health_check():
+    try:
+        await db.command("ping")
+    except PyMongoError as exc:
+        return {"status": "error", "message": str(exc)}
+    return {"status": "ok", "message": "Connected to MongoDB successfully!"}
 
 
 @router.post("/setup", response_model=BudgetSetupOut)
