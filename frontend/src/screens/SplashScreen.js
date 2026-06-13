@@ -291,7 +291,7 @@ export default function SplashScreen({ visible = true, onFadeComplete }) {
       ))}
 
       <View style={styles.centerWrap}>
-        <Image source={require('../theme/notekit_icon.jpeg')} style={styles.logo} resizeMode="cover" />
+        <Image source={require('../theme/notekit_splash_logo.jpeg')} style={styles.logo} resizeMode="cover" />
         <View style={styles.wordmarkRow}>
           {letters.map((letter, index) => (
             <Letter key={`${letter}-${index}`} letter={letter} index={index} pulse={textPulse} />
